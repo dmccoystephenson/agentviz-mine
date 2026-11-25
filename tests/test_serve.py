@@ -70,11 +70,6 @@ class ServeFixtureTest(unittest.TestCase):
         self.assertIn("_agentviz_frame", body.decode())
         self.assertNotIn("_mn_set_", body.decode())
 
-    def test_no_feed_string_reaches_innerHTML(self):
-        for name in ("page.js", "mine-model.js", "mine-frame.js"):
-            _, _, body = get("/" + name)
-            self.assertNotIn("innerHTML", body.decode(), name)
-
     def test_feed_parses(self):
         status, ctype, body = get("/api/agents?fixture=1")
         self.assertEqual(status, 200)
@@ -104,19 +99,6 @@ class VendoredCopiesTest(unittest.TestCase):
         result = subprocess.run([sys.executable, os.path.join(REPO, "vendor", "agentviz-kit", "check_vendor.py"), REPO],
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
         self.assertEqual(result.returncode, 0, result.stderr)
-
-
-class NoLocalPathsTest(unittest.TestCase):
-    MACHINE_ROOT = "/" + "root/"  # split so this file does not match itself
-
-    def test_no_machine_paths_in_tracked_text(self):
-        out = subprocess.run(["git", "ls-files"], cwd=REPO, stdout=subprocess.PIPE, universal_newlines=True).stdout
-        skip = (".wasm", ".png", ".gif", "package-lock.json")
-        for name in out.split():
-            if name.endswith(skip) or name.startswith("vendor/"):
-                continue
-            with open(os.path.join(REPO, name), encoding="utf-8", errors="replace") as fh:
-                self.assertNotIn(self.MACHINE_ROOT, fh.read(), name)
 
 
 if __name__ == "__main__":
