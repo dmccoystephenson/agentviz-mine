@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>agentviz mine</title>
+<style>
+  :root { color-scheme: dark; --bg: #0d0b09; --fg: #f1e9dc; --muted: #b9ab95; --panel: rgba(24, 19, 15, 0.92);
+    --edge: rgba(255, 220, 160, 0.18); --red: #ff3b2f; --amber: #ffb02e; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--fg);
+    font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  #view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; outline: none; }
+  #labels { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+  .label { position: absolute; transform: translate(-50%, -100%); white-space: nowrap; font-size: 12px;
+    padding: 1px 7px; border-radius: 999px; background: rgba(20, 15, 10, 0.78); border: 1px solid var(--edge); }
+  .label.place { font-size: 13px; font-weight: 600; background: rgba(60, 40, 20, 0.85); }
+  .label.follower { font-size: 11px; opacity: 0.9; }
+  .label.waiting { background: var(--red); border-color: #fff; color: #fff; font-weight: 700; }
+  .label.offline { opacity: 0.55; text-decoration: line-through; }
+  .label .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: 0; }
+  #hud { position: fixed; top: max(10px, env(safe-area-inset-top)); left: max(10px, env(safe-area-inset-left));
+    right: max(10px, env(safe-area-inset-right)); display: flex; gap: 8px; align-items: center; pointer-events: none; }
+  #hud > * { pointer-events: auto; }
+  .chip { background: var(--panel); border: 1px solid var(--edge); border-radius: 999px; padding: 5px 10px;
+    display: inline-flex; gap: 6px; align-items: center; color: var(--fg); font: inherit; }
+  button.chip { cursor: pointer; min-height: 36px; }
+  #title { font-weight: 700; letter-spacing: 0.02em; }
+  #waitBtn { background: var(--red); border-color: #fff; color: #fff; font-weight: 700; animation: pulse 1s infinite; }
+  #waitBtn[hidden] { display: none; }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 8px rgba(255, 59, 47, 0.25); } }
+  .spacer { flex: 1; }
+  #counts span { white-space: nowrap; }
+  #legend { position: fixed; right: max(10px, env(safe-area-inset-right)); top: 56px; width: min(320px, calc(100vw - 20px));
+    background: var(--panel); border: 1px solid var(--edge); border-radius: 12px; padding: 10px 12px; }
+  #legend[hidden], #sheet[hidden] { display: none; }
+  #legend table { border-collapse: collapse; width: 100%; }
+  #legend td { padding: 3px 4px; vertical-align: top; }
+  #legend td:first-child { font-size: 18px; width: 28px; text-align: center; }
+  #sheet { position: fixed; left: max(10px, env(safe-area-inset-left)); bottom: max(10px, env(safe-area-inset-bottom));
+    width: min(360px, calc(100vw - 20px)); max-height: 60vh; overflow: auto; background: var(--panel);
+    border: 1px solid var(--edge); border-radius: 14px; padding: 12px 14px; box-sizing: border-box; }
+  #sheet h2 { margin: 0 0 4px; font-size: 18px; display: flex; gap: 8px; align-items: center; }
+  #sheet .close { margin-left: auto; background: none; border: 0; color: var(--muted); font-size: 22px; cursor: pointer;
+    min-width: 36px; min-height: 36px; }
+  .state { border-radius: 999px; padding: 1px 8px; font-size: 12px; font-weight: 600; background: #444; }
+  .state.busy { background: #2f7d3a; } .state.waiting { background: var(--red); } .state.idle { background: #5b5b6b; }
+  .state.offline { background: #333; color: #999; } .state.stalled { background: var(--amber); color: #221; }
+  .state.active { background: #2f7d3a; } .state.resting { background: #5b5b6b; }
+  .row { display: flex; gap: 8px; align-items: baseline; margin: 3px 0; }
+  .row .k { color: var(--muted); min-width: 56px; font-size: 12px; }
+  .big { font-size: 20px; }
+  #sheet ul { list-style: none; margin: 6px 0 0; padding: 0; }
+  #sheet li { display: flex; gap: 8px; align-items: center; padding: 5px 4px; border-top: 1px solid var(--edge); cursor: pointer; }
+  #sheet li .n { margin-left: auto; color: var(--muted); font-size: 12px; }
+  .bar { height: 4px; background: #c9a25a; border-radius: 2px; }
+  @media (max-width: 600px) {
+    #sheet { left: 0; right: 0; bottom: 0; width: 100%; border-radius: 16px 16px 0 0; max-height: 52vh;
+      padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+    #sheet::before { content: ""; display: block; width: 40px; height: 4px; border-radius: 2px; background: #776;
+      margin: -4px auto 8px; }
+    #title .long { display: none; }
+    #counts .w { display: none; }
+  }
+</style>
+</head>
+<body>
+<canvas id="view" tabindex="0" role="img" aria-label="Claude Code sessions as a mine cross-section"></canvas>
+<div id="labels" aria-hidden="true"></div>
+<div id="hud">
+  <span class="chip" id="title">⛏ <span class="long">agentviz</span> mine</span>
+  <button class="chip" id="waitBtn" hidden aria-label="Sessions waiting on you">🔔 <span id="waitN">0</span></button>
+  <span class="chip" id="counts" aria-live="polite"></span>
+  <span class="spacer"></span>
+  <button class="chip" id="fitBtn" aria-label="Show the whole mine">⤢</button>
+  <button class="chip" id="legendBtn" aria-label="Legend" aria-expanded="false">?</button>
+</div>
+<div id="legend" hidden>
+  <table>
+    <tr><td>🏗</td><td>Headframe = a place (repo); shafts below it are its sessions</td></tr>
+    <tr><td>⛏</td><td><b>edit</b>: pickaxe swinging, sparks</td></tr>
+    <tr><td>🛒</td><td><b>run</b>: rock drill + ore cart rolling</td></tr>
+    <tr><td>🔦</td><td><b>read</b>: lamp held up to a glittering vein</td></tr>
+    <tr><td>📡</td><td><b>web</b>: signals up the bell rope to the surface</td></tr>
+    <tr><td>👷</td><td><b>delegate</b>: new tunnel mouths opening</td></tr>
+    <tr><td>💭</td><td><b>think</b>: sitting on the pick, thoughts rising</td></tr>
+    <tr><td>🪣</td><td><b>other</b>: shovelling spoil</td></tr>
+    <tr><td>🚨</td><td><b>waiting</b>: red cage + flare at the shaft top: needs you</td></tr>
+    <tr><td>💤</td><td><b>idle</b>: miner sitting, lamp dimmed</td></tr>
+    <tr><td>🪵</td><td><b>offline</b>: shaft boarded up</td></tr>
+    <tr><td>🌫</td><td><b>stalled</b>: dust cloud, amber warning glow</td></tr>
+    <tr><td>↔</td><td>Side tunnels = subagents; length = tool calls</td></tr>
+    <tr><td>💤</td><td>Resting subagent: tunnel lamp hung up, miner sitting</td></tr>
+  </table>
+</div>
+<section id="sheet" hidden aria-live="polite"></section>
+<script src="strata-loader.js"></script>
+<script src="strata-kit.js"></script>
+<script src="mine.js"></script>
+</body>
+</html>
