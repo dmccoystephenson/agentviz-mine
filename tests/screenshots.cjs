@@ -52,7 +52,7 @@ async function gif(browser) {
   await ctx.close();
   if (errors.length) throw new Error("gif: console errors: " + errors.join(" | "));
   const out = path.join(MEDIA, "mine.gif");
-  // Pillow (no ffmpeg needed): 800 px wide, one shared adaptive palette.
+  // Pillow (no ffmpeg needed): 800 px wide, an adaptive palette per frame.
   execFileSync("python3", ["-c", `
 import glob, sys
 from PIL import Image
@@ -60,8 +60,7 @@ files = sorted(glob.glob(sys.argv[1] + "/f*.png"))
 frames = [Image.open(f).convert("RGB") for f in files]
 w = 800; h = round(frames[0].height * w / frames[0].width)
 frames = [f.resize((w, h), Image.LANCZOS) for f in frames]
-pal = frames[len(frames) // 2].quantize(colors=160, method=Image.MEDIANCUT)
-out = [f.quantize(palette=pal, dither=Image.FLOYDSTEINBERG) for f in frames]
+out = [f.quantize(colors=256, method=Image.FASTOCTREE, dither=Image.FLOYDSTEINBERG) for f in frames]
 out[0].save(sys.argv[2], save_all=True, append_images=out[1:], duration=125, loop=0, optimize=True)
 `, dir, out]);
   fs.rmSync(dir, {recursive: true, force: true});
