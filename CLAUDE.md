@@ -1,15 +1,23 @@
 # CLAUDE.md
 
-agentviz-mine: Claude Code sessions drawn as a mine cross-section on the
-Strata web kit. Part of the agentviz family (https://github.com/dmccoystephenson/agentviz).
+agentviz-mine: Claude Code sessions drawn as a mine cross-section (Strata web
+kit). Part of the agentviz family: https://github.com/dmccoystephenson/agentviz
 
-- Data comes only from `/api/agents` (vendor/agentfeed, schema in its docs).
-  Never edit `vendor/agentfeed/`; re-vendor with agentviz's `tools/vendor-feed.sh`.
-- Scene: `scene/main.cpp` (draws), `web/mine.js` (layout, easing, picking, panel).
-  Rebuild with `scene/build.sh` (Strata 0.10.0, emsdk 6.0.11); the built
-  `web/mine-engine.js|.wasm` are committed.
+- Data comes only from `/api/agents` (vendor/agentfeed; schema in the agentviz repo's docs/FEED.md).
+- Shared pieces come from the agentviz kit (docs/KIT.md there): `vendor/agentviz-kit/` and the
+  `web/agentviz-*` copies. Never edit `vendor/` or `web/agentviz-*`; re-vendor from an agentviz
+  checkout with `tools/vendor-kit.sh <this repo>`. `tests/test_serve.py` checks the PINs.
+- Page: `web/mine-model.js` lays out pitheads, shafts and tunnels and eases them;
+  `web/mine-frame.js` packs each frame in the agentviz wire format; `web/page.js` boots the feed
+  client, HUD, labels, picking and camera; `web/index.html` holds the theme and the legend.
+- Scene: `scene/main.cpp` decodes the wire (`agentviz.h`, read by `workings.h`) and calls
+  `earth.h`, `structures.h`, `miner.h` (helpers in `draw_util.h`). Build:
+  `EMSDK=/path/to/emsdk vendor/agentviz-kit/scene/build-scene.sh scene/kit.conf`
+  (emsdk 6.0.11, Strata 0.10.0). The built `web/mine-engine.*` are committed.
 - Run: `python3 -m vendor.agentfeed serve --web web --port 8845 [--fixture]`.
-- Tests: `python3 -m unittest discover -s tests`; browser smoke:
-  `NODE_PATH=/root/arcade-watch/node_modules node tests/smoke.cjs`.
-- Screenshots only from the fixture feed. Port 8845 (tests use 8945).
-- Private repo; hosted Actions are refused, run localci on PRs.
+- Tests: `python3 -m unittest discover -s tests`; browser tests after `npm ci` and
+  `npx playwright install chromium`: `npm run smoke`, `npm run screenshots` (Pillow from
+  requirements-dev.txt for the GIF). Tests use port 9112 (`MINE_TEST_PORT` overrides).
+- Screenshots come from the FIXTURE feed only, never live sessions.
+- While the repo is private, hosted Actions are billing-blocked: run localci on PRs
+  (drop this line once it is public).
