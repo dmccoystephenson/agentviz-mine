@@ -12,10 +12,13 @@ One of the [agentviz](https://github.com/dmccoystephenson/agentviz) family:
 ten views of the same feed.
 
 ![The whole mine: seven pitheads, fifteen shafts, two leads with their side tunnels](docs/media/hero.png)
-*The demo feed (fixture), from the front. Seven places (repos), fifteen
-sessions: two leads with 5 and 7 subagent tunnels, red pillars of light over
-Thistle's and Juniper's shafts (waiting on you), boarded-up shafts for the
-offline sessions. Busier places are sunk deeper.*
+*The demo feed (fixture), from the front and a little above, so the land
+runs back behind the cut and the strata carry on below the workings. Seven
+places (repos), fifteen sessions: two leads with 5 and 7 subagent tunnels,
+red pillars of light over Thistle's and Juniper's shafts (waiting on you),
+boarded-up shafts for the offline sessions. Busier places are sunk deeper;
+busy sessions' labels are bright, idle ones fade back, a stalled one (Patch)
+has an amber edge.*
 
 ![A five-second loop of the lead Wren's workings](docs/media/mine.gif)
 *Five seconds of motion: Wren's subagents swing picks, drive drills with ore
@@ -41,13 +44,16 @@ see the agentviz [SECURITY.md](https://github.com/dmccoystephenson/agentviz/blob
 Query options: `?fixture=1` (demo feed against a live server), `?fps=1`
 (frame stats), `?quality=0|1|2`.
 
-Tap or click a miner (or a shaft) for its card (a bottom sheet on a phone;
-swipe it down or tap the cross to close): name, state, action, what it is
+Tap or click a miner (or a shaft) for its card (a bottom sheet on a phone,
+where the view also slides the miner up above the sheet; swipe it down or
+tap the cross to close): name, state, action, what it is
 doing, branch, place, tool calls and its subagents; tap a subagent to fly to
 its tunnel, where its card shows its own branch. The red **need you** chip
 names who is waiting and why (a question, or a permission prompt), flies to
 that shaft and cycles through them; the house button shows the whole mine
-again; **?** opens the legend. If the feed stops answering, a banner says so
+again; **?** opens the legend. On a phone the top bar stays one row: the
+counts scroll sideways under the two buttons. Labels never hide under the
+bar: a "needs you" label slides down below it. If the feed stops answering, a banner says so
 and the last snapshot stays; with no sessions at all, a hint says how to
 start. Drag to orbit, right-drag or two fingers to pan, wheel or pinch to
 zoom.
@@ -74,6 +80,7 @@ zoom.
 | Planks nailed over the collar, boards crossed in the shaft, rubble, no miner | state `offline` | [idle-offline](docs/media/idle-offline.png) |
 | Dust churning round the face, pebbles falling, a blinking amber lamp | `stalled`: a session busy with nothing written for 5 minutes, or a subagent quiet that long without finishing | [stalled](docs/media/stalled.png), [stalled-subagent](docs/media/stalled-subagent.png) |
 | Tunnel still lit by a lamp hung on a prop, miner sitting | a **resting** subagent (quiet for 2 minutes) | [resting-subagent](docs/media/resting-subagent.png) |
+| A label with an amber edge; a faded label | that agent is stalled; that agent is idle or resting (busy ones stay bright) | [stalled](docs/media/stalled.png) |
 | Yellow corner brackets and a bobbing marker | the selected agent | [resting-subagent](docs/media/resting-subagent.png) |
 
 ## Screenshots
@@ -124,7 +131,7 @@ tunnel.*
 <img src="docs/media/phone.png" width="300" alt="Phone portrait with the bottom sheet open">
 
 *Phone portrait (390 × 844, DPR 3): Thistle selected, the card as a bottom
-sheet saying why it waits.*
+sheet saying why it waits, the top bar in one row.*
 
 ![The mine from above and to the right](docs/media/angle-high.png)
 *From above and to one side: the cut face is a slab, the land runs back to

@@ -118,6 +118,24 @@ inline std::vector<float> columnEdges(float left, float right, const std::vector
     return xs;
 }
 
+// Below the workings the bands carry on, one full-width block each, so a
+// framed view ends in rock rather than in a black slab.
+constexpr float kDeep = 22.0f;
+inline void drawDeepBands(Host& h, float left, float right, float bottom) {
+    float d = 0.0f, y = bottom;
+    for (int k = 0; k < 80 && y > bottom - kDeep; ++k) {
+        d += kBands[k % kBandCount].thick;
+        if (-d >= y) continue;
+        const float lo = std::max(-d, bottom - kDeep);
+        // The columns' own depth shading, then a fade into the dark below.
+        const float fade = (1.0f - 0.45f * std::clamp(-0.5f * (y + lo) / 24.0f, 0.0f, 1.0f)) *
+                           (1.0f - 0.5f * (bottom - lo) / kDeep);
+        h.add(STRATA_PRIMITIVE_CUBE, 0.5f * (left + right), 0.5f * (y + lo), 0.5f * (kBack + kFront), right - left, y - lo,
+              kFront - kBack, mul(kBands[k % kBandCount].c, fade));
+        y = lo;
+    }
+}
+
 inline void drawEarth(Host& h, const World& w, const std::vector<Cavity>& cavities) {
     const float left = w.minX - 10.0f, right = w.maxX + 10.0f, bottom = w.bottom - 3.0f;
     const std::vector<float> xs = columnEdges(left, right, cavities);
@@ -130,8 +148,10 @@ inline void drawEarth(Host& h, const World& w, const std::vector<Cavity>& caviti
     // The land behind the cut, and bedrock under it.
     h.add(STRATA_PRIMITIVE_CUBE, 0.5f * (left + right), -0.2f, kBack - 40.0f, (right - left) + 120.0f, 0.4f, 80.0f,
           {0.20f, 0.33f, 0.11f});
-    h.add(STRATA_PRIMITIVE_CUBE, 0.5f * (left + right), bottom - 30.0f, 0.5f * (kBack + kFront), right - left, 60.0f,
-          kFront - kBack + 0.2f, {0.07f, 0.07f, 0.08f});
+    // Wider than the columns, so their ends never show at the view's lower corners.
+    drawDeepBands(h, left - 60.0f, right + 60.0f, bottom);
+    h.add(STRATA_PRIMITIVE_CUBE, 0.5f * (left + right), bottom - kDeep - 30.0f, 0.5f * (kBack + kFront), right - left + 120.0f,
+          60.0f, kFront - kBack + 0.2f, {0.07f, 0.07f, 0.08f});
 }
 
 }  // namespace mine
