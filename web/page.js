@@ -114,7 +114,9 @@
       hudRectsAt = now;
       hudRects = [];
       const bar = document.querySelector(".av-bar");
-      for (const c of bar ? bar.children : []) {
+      // The chips themselves: with oneRow the counts sit in .av-bar-scroll
+      // (display: contents on a desktop, so it has no box of its own there).
+      for (const c of bar ? bar.querySelectorAll(":scope > *, .av-bar-scroll > *") : []) {
         const r = c.getBoundingClientRect();
         if (r.width > 0 && !c.classList.contains("av-spacer")) hudRects.push(r);
       }
@@ -161,6 +163,7 @@
 
   const hud = AgentvizHud.create({
     title: "⛏ agentviz mine",
+    oneRow: true,
     legend: document.getElementById("legend"),
     buttons: [{icon: "home", label: "Show the whole mine", onClick: () => fit(false)}],
     rows: ({session, follower}) => (follower ? [] : [["tool calls", session.toolCount != null ? session.toolCount : "—"]]),
