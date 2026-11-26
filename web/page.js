@@ -33,7 +33,11 @@
     // A wide mine leaves height to spare: keep the deepest face near the bottom
     // edge and give the spare to the sky, not to bare bedrock.
     const ty = Math.max((6 + w.bottom) / 2, w.bottom - 1.5 + dist * FOV_HALF_TAN * 0.92);
-    return {tx: (w.minX + w.maxX) / 2, ty: Math.min(ty, 4), tz: 0, dist, yaw: HALF_PI, pitch: PITCH};
+    // With height to spare, look down a little more: the land behind the cut
+    // fills the upper part of the view instead of bare sky.
+    const spare = dist * FOV_HALF_TAN * 2 - height;
+    const lift = Math.min(0.2, Math.max(0, spare / dist) * 0.5);
+    return {tx: (w.minX + w.maxX) / 2, ty: Math.min(ty, 4), tz: 0, dist, yaw: HALF_PI, pitch: PITCH + lift};
   }
   function flyTo(to, instant) {
     if (instant || !kit || kit.driven) { Object.assign(cam, to); camAnim = null; return; }
@@ -59,12 +63,15 @@
   /* ------------------------------------------------------------ labels */
   function edge(el, colour) { if (el.style.borderColor !== colour) el.style.borderColor = colour; }
 
+  // A label's state at a glance: "needs you" is solid red, a stall gets an
+  // amber edge, idle and offline sessions recede so the busy ones stand out.
   function sessionLabel(e) {
     const s = e.data, waiting = s.state === "waiting";
-    const cls = "lead" + (waiting ? " waiting" : s.state === "offline" ? " offline" : "");
+    const cls = "lead" + (waiting ? " waiting" : s.stalled ? " stalled" : s.state === "offline" ? " offline"
+      : s.state === "busy" ? "" : " quiet");
     const text = waiting ? (s.name || s.id) + " " + (REASON[s.waitingReason] || "needs you") : s.name || s.id.slice(0, 6);
     const el = labels.set("s:" + e.id, {cls, state: s.stalled ? "stalled" : s.state, text});
-    edge(el, waiting ? "" : shirtOf(s.seed));
+    edge(el, waiting || s.stalled ? "" : shirtOf(s.seed));
     return {el, q: kit.project(e.cur.x, 2.5, 0.2), rank: waiting || e.id === selectedId ? 0 : 2};
   }
 
@@ -74,9 +81,9 @@
     const family = sel && (sel === f || sel === f.parent || sel.parent === f.parent);
     if (!family && cam.dist > FOLLOWER_LABELS_WITHIN) return null;
     const d = f.data, resting = d.state !== "active";
-    const el = labels.set("f:" + f.id, {cls: "sub", state: d.stalled ? "stalled" : null,
-      action: resting ? "none" : d.action, text: d.label || "subagent"});
-    edge(el, shirtOf(f.session.seed));
+    const el = labels.set("f:" + f.id, {cls: "sub" + (d.stalled ? " stalled" : resting ? " quiet" : ""),
+      state: d.stalled ? "stalled" : null, action: resting ? "none" : d.action, text: d.label || "subagent"});
+    edge(el, d.stalled ? "" : shirtOf(f.session.seed));
     const p = mine.followerPos(f);
     return {el, q: kit.project(p.x, p.y + 2.0, 0.2), rank: family ? 1 : 4};
   }
@@ -94,7 +101,34 @@
       if (item) items.push(item);
     }
     labels.end();
+    clearOfHud(items);
     StrataKit.placeLabels(items);
+  }
+
+  // World labels never sit under the top bar: a "needs you" label slides down
+  // below it, any other label hides until the camera moves it clear.
+  let hudRects = [], hudRectsAt = -1e9;
+  function clearOfHud(items) {
+    const now = performance.now();
+    if (now - hudRectsAt > 300) {
+      hudRectsAt = now;
+      hudRects = [];
+      const bar = document.querySelector(".av-bar");
+      for (const c of bar ? bar.children : []) {
+        const r = c.getBoundingClientRect();
+        if (r.width > 0 && !c.classList.contains("av-spacer")) hudRects.push(r);
+      }
+    }
+    const low = hudRects.reduce((m, r) => Math.max(m, r.bottom), 0) + 60;
+    for (const it of items) {
+      if (!it.q || it.q.y > low) continue;
+      const w = it.el.offsetWidth || 80, h = it.el.offsetHeight || 20, x0 = it.q.x - w / 2, x1 = it.q.x + w / 2;
+      for (const r of hudRects) {
+        if (x1 < r.left - 4 || x0 > r.right + 4 || it.q.y - h > r.bottom + 4) continue;
+        it.q = it.rank <= 0 ? {x: it.q.x, y: r.bottom + 6 + h, w: it.q.w} : null;
+        if (!it.q) break;
+      }
+    }
   }
 
   /* ------------------------------------------------------------ picking + selection */
@@ -120,7 +154,9 @@
     selectedId = idOf(target);
     const e = selectedId && mine.get(selectedId);
     if (kit) kit.selected = e || null;
-    if (e && (how === "waiting" || how === "list")) focusOn(e);
+    // On a phone a tap also lifts the subject above the bottom sheet, so the
+    // card never covers what was tapped.
+    if (e && (how === "waiting" || how === "list" || (how === "tap" && window.innerWidth <= 640))) focusOn(e);
   }
 
   const hud = AgentvizHud.create({
